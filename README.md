@@ -1,6 +1,6 @@
-# Pong: Player vs Computer
+# Pong Disco: Player vs Computer
 
-A small, single-player Pong game built with HTML, CSS, vanilla JavaScript, and the HTML5 Canvas API. The complete game is in `index.html`; it has no dependencies, build step, or external assets.
+A single-player Pong game against an AI opponent, built with HTML, CSS, vanilla JavaScript, and the HTML5 Canvas API. The complete game is in `index.html`; it has no dependencies, build step, or external assets.
 
 ## Run locally
 
