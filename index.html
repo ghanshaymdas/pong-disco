@@ -47,10 +47,12 @@
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const W = canvas.width, H = canvas.height;
-      const paddle = { w: 14, h: 104, speed: 430 };
+      const paddle = { w: 22, h: 104, speed: 430 };
       const player = { x: 34, y: (H - paddle.h) / 2 };
       const computer = { x: W - 34 - paddle.w, y: (H - paddle.h) / 2 };
-      const ball = { x: W / 2, y: H / 2, r: 13, dx: 360, dy: 105, speed: 360 };
+      const BASE_BALL_SPEED = 360, MAX_BALL_SPEED = 620, WALL_SPEEDUP = 1.08;
+      const ball = { x: W / 2, y: H / 2, r: 15, dx: BASE_BALL_SPEED, dy: 0, speed: BASE_BALL_SPEED };
+      const bounceEffects = [];
       const keys = new Set();
       const scores = { player: 0, computer: 0 };
       const scoreEls = { player: document.getElementById("playerScore"), computer: document.getElementById("computerScore") };
@@ -58,9 +60,11 @@
       let paused = false, finished = false, pointTimer = 0, lastTime = 0;
 
       function resetBall(towardPlayer) {
-        ball.x = W / 2; ball.y = H / 2; ball.speed = 360;
-        ball.dx = towardPlayer ? -ball.speed : ball.speed;
-        ball.dy = (Math.random() * 2 - 1) * 125;
+        ball.x = W / 2; ball.y = H / 2; ball.speed = BASE_BALL_SPEED;
+        const angle = (Math.random() * 2 - 1) * 0.3;
+        ball.dx = (towardPlayer ? -1 : 1) * ball.speed * Math.cos(angle);
+        ball.dy = ball.speed * Math.sin(angle);
+        bounceEffects.length = 0;
       }
       function clampPaddles() {
         player.y = Math.max(0, Math.min(H - paddle.h, player.y));
@@ -84,13 +88,21 @@
         // Position-based angle bonus: center hits are flatter, edge hits are steeper.
         const impact = (ball.y - (p.y + paddle.h / 2)) / (paddle.h / 2);
         const angle = impact * (Math.PI / 3.2);
-        ball.speed = Math.min(ball.speed + 22, 650);
+        // Keep the rally's current speed; it resets only when a point starts a new round.
         ball.dx = direction * ball.speed * Math.cos(angle);
         ball.dy = ball.speed * Math.sin(angle);
         ball.x = direction > 0 ? p.x + paddle.w + ball.r : p.x - ball.r;
+        addBounceEffect(ball.x, ball.y, direction > 0 ? "#ff62dc" : "#60e9ff");
+      }
+      function addBounceEffect(x, y, color) {
+        bounceEffects.push({ x, y, color, age: 0, duration: 0.28 });
       }
       function update(dt) {
         if (paused || finished) return;
+        for (let i = bounceEffects.length - 1; i >= 0; i--) {
+          bounceEffects[i].age += dt;
+          if (bounceEffects[i].age >= bounceEffects[i].duration) bounceEffects.splice(i, 1);
+        }
         if (pointTimer > 0) { pointTimer = Math.max(0, pointTimer - dt); return; }
 
         const move = (keys.has("ArrowUp") || keys.has("w") ? -1 : 0) + (keys.has("ArrowDown") || keys.has("s") ? 1 : 0);
@@ -106,8 +118,17 @@
 
         ball.x += ball.dx * dt;
         ball.y += ball.dy * dt;
-        if (ball.y - ball.r < 0) { ball.y = ball.r; ball.dy = Math.abs(ball.dy); }
-        if (ball.y + ball.r > H) { ball.y = H - ball.r; ball.dy = -Math.abs(ball.dy); }
+        if (ball.y - ball.r < 0) {
+          ball.y = ball.r; ball.dy = Math.abs(ball.dy);
+          addBounceEffect(ball.x, ball.y, "#ff62dc");
+          ball.speed = Math.min(ball.speed * WALL_SPEEDUP, MAX_BALL_SPEED);
+          const scale = ball.speed / Math.hypot(ball.dx, ball.dy); ball.dx *= scale; ball.dy *= scale;
+        } else if (ball.y + ball.r > H) {
+          ball.y = H - ball.r; ball.dy = -Math.abs(ball.dy);
+          addBounceEffect(ball.x, ball.y, "#60e9ff");
+          ball.speed = Math.min(ball.speed * WALL_SPEEDUP, MAX_BALL_SPEED);
+          const scale = ball.speed / Math.hypot(ball.dx, ball.dy); ball.dx *= scale; ball.dy *= scale;
+        }
 
         if (ball.dx < 0 && hitsPaddle(player)) bounceFrom(player, 1);
         else if (ball.dx > 0 && hitsPaddle(computer)) bounceFrom(computer, -1);
@@ -118,26 +139,32 @@
       function roundedRect(x, y, width, height, radius) {
         ctx.beginPath(); ctx.roundRect(x, y, width, height, radius);
       }
-      function drawBackground() {
-        ctx.fillStyle = "#171521"; ctx.fillRect(0, 0, W, H);
-        // Two faint pools of colored light hint at a dance floor without covering play.
-        for (const [x, color] of [[W * .18, "#b33d8b"], [W * .82, "#496da0"]]) {
-          const pool = ctx.createRadialGradient(x, 0, 8, x, 0, 310);
-          pool.addColorStop(0, color + "25"); pool.addColorStop(1, color + "00");
-          ctx.fillStyle = pool; ctx.fillRect(x - 310, 0, 620, 310);
-        }
-        // A few small, irregular glints evoke mirrored tiles, kept deliberately dim.
-        ctx.fillStyle = "#d4bad233";
-        [[117, 68], [772, 104], [238, 472], [681, 399], [438, 83], [548, 512], [84, 342], [826, 276]].forEach(([x, y]) => {
-          ctx.fillRect(x, y, 2, 2);
+      function drawBackground(time) {
+        ctx.fillStyle = "#121020"; ctx.fillRect(0, 0, W, H);
+        // Slow colored beams and soft pools of light bring back the dance-floor feel.
+        const sway = Math.sin(time / 1500) * 90;
+        [[W * .12 + sway, 1, "#ff35c8"], [W * .88 - sway, -1, "#35dfff"], [W * .5 - sway * .35, 1, "#9d59ff"]].forEach(([x, dir, color], i) => {
+          ctx.save(); ctx.globalAlpha = i === 2 ? .045 : .075; ctx.fillStyle = color;
+          ctx.beginPath(); ctx.moveTo(x, -8); ctx.lineTo(x + dir * (170 + i * 35), H); ctx.lineTo(x - dir * 115, H); ctx.closePath(); ctx.fill(); ctx.restore();
         });
+        for (const [x, y, radius, color] of [[W * .17, H * .08, 280, "#f321bf"], [W * .84, H * .2, 300, "#14b9ee"], [W * .52, H * .95, 250, "#813cf4"]]) {
+          const pool = ctx.createRadialGradient(x, y, 4, x, y, radius);
+          pool.addColorStop(0, color + "34"); pool.addColorStop(1, color + "00");
+          ctx.fillStyle = pool; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        }
+        // A handful of dim mirrored flecks break up the dark field.
+        ctx.save(); ctx.globalAlpha = .32;
+        [[117,68],[772,104],[238,472],[681,399],[438,83],[548,512],[84,342],[826,276],[342,248],[610,180],[195,294],[739,488]].forEach(([x,y], i) => {
+          ctx.fillStyle = i % 2 ? "#73eaff" : "#ff8ce5"; ctx.fillRect(x, y, 2, 2);
+        });
+        ctx.restore();
       }
       function drawPaddle(p, fill, edge) {
-        ctx.save(); ctx.shadowColor = edge; ctx.shadowBlur = 7;
-        roundedRect(p.x, p.y, paddle.w, paddle.h, 6);
+        ctx.save(); ctx.shadowColor = edge; ctx.shadowBlur = 20;
+        roundedRect(p.x, p.y, paddle.w, paddle.h, 9);
         ctx.fillStyle = fill; ctx.fill();
-        ctx.shadowBlur = 0; ctx.strokeStyle = edge; ctx.lineWidth = 1;
-        roundedRect(p.x + .5, p.y + .5, paddle.w - 1, paddle.h - 1, 5.5); ctx.stroke();
+        ctx.shadowBlur = 0; ctx.strokeStyle = "#ffffffbb"; ctx.lineWidth = 1;
+        roundedRect(p.x + .5, p.y + .5, paddle.w - 1, paddle.h - 1, 8); ctx.stroke();
         ctx.restore();
       }
       function drawBall() {
@@ -154,14 +181,21 @@
         ctx.fillStyle = "#ffffffaa"; ctx.beginPath(); ctx.arc(ball.x - 4, ball.y - 5, 2.2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
-      function draw() {
-        drawBackground();
+      function draw(time) {
+        drawBackground(time);
         ctx.save();
-        ctx.strokeStyle = "#7c7483"; ctx.lineWidth = 2; ctx.setLineDash([8, 15]);
+        ctx.shadowColor = "#c945ef"; ctx.shadowBlur = 10;
+        ctx.strokeStyle = "#e78cff99"; ctx.lineWidth = 2; ctx.setLineDash([8, 15]);
         ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.setLineDash([]);
         ctx.restore();
-        drawPaddle(player, "#e9d8c2", "#bd728d");
-        drawPaddle(computer, "#cbd5db", "#66869a");
+        drawPaddle(player, "#ff8be7", "#ff45cf");
+        drawPaddle(computer, "#8cefff", "#3cbbe9");
+        for (const effect of bounceEffects) {
+          const progress = effect.age / effect.duration;
+          ctx.save(); ctx.globalAlpha = 1 - progress; ctx.strokeStyle = effect.color;
+          ctx.shadowColor = effect.color; ctx.shadowBlur = 16; ctx.lineWidth = 2.5 * (1 - progress) + .5;
+          ctx.beginPath(); ctx.arc(effect.x, effect.y, ball.r + progress * 23, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        }
         drawBall();
         if (paused || finished) {
           ctx.fillStyle = "#080b12cc"; ctx.fillRect(0, 0, W, H);
@@ -174,7 +208,7 @@
       }
       function frame(time) {
         const dt = lastTime ? Math.min((time - lastTime) / 1000, 0.033) : 0;
-        lastTime = time; update(dt); draw(); requestAnimationFrame(frame);
+        lastTime = time; update(dt); draw(time); requestAnimationFrame(frame);
       }
       function restart() {
         scores.player = scores.computer = 0;

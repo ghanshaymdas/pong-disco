@@ -20,8 +20,9 @@ The first side to reach seven points wins. To play again after a match, press **
 
 ## Implementation notes
 
-- The canvas uses a 900 × 560 logical playfield and scales responsively in the page. Muted pools of colored light and a few mirrored-tile glints give the dark background a restrained disco feel.
-- The ball is drawn from Canvas primitives: a warm shaded surface, one curved seam, a small highlight, and a soft shadow. It is larger than a standard Pong ball for visibility. Rounded paddles use subdued contrasting colors.
+- The canvas uses a 900 × 560 logical playfield and scales responsively in the page. Colored moving light beams, pools of light, and mirrored-tile glints create a disco backdrop.
+- The ball has a 15-pixel radius, shaded surface, curved seam, highlight, and soft shadow. A brief expanding glow ring marks each bounce. Rounded, wider paddles have bright neon colors and a soft glow.
+- Each wall bounce raises the ball's speed by 8%, up to a cap. Paddle hits keep that speed while changing direction; scoring starts the next round at the regular 360-pixel-per-second speed.
 - Player input is stored in a set of currently held keys and read every animation frame. This avoids depending on browser key-repeat events. Paddle positions are clamped to the playfield.
 - The ball position advances using horizontal and vertical velocity (`dx`, `dy`). At the top and bottom edges, the vertical velocity reverses. A capped frame delta keeps movement stable if a browser frame is delayed.
 - Paddle collision is checked manually as circle-to-axis-aligned-rectangle overlap. The ball is only reflected when moving toward the paddle, and is moved just outside the paddle after impact to prevent repeated collision on consecutive frames.
