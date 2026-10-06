@@ -47,7 +47,7 @@
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const W = canvas.width, H = canvas.height;
-      const paddle = { w: 22, h: 144, speed: 430 };
+      const paddle = { w: 22, h: 180, speed: 430 };
       const player = { x: 34, y: (H - paddle.h) / 2 };
       const computer = { x: W - 34 - paddle.w, y: (H - paddle.h) / 2 };
       const BASE_BALL_SPEED = 360, MAX_BALL_SPEED = 620, WALL_SPEEDUP = 1.08;
@@ -168,17 +168,15 @@
         ctx.restore();
       }
       function drawBall() {
-        // Keep the ball easy to spot: a warm ivory surface, a small highlight, and a plain shadow.
+        // Keep the ball easy to spot with a clean white surface and soft shadow.
         ctx.save(); ctx.globalAlpha = 0.28; ctx.fillStyle = "#05040a";
         ctx.beginPath(); ctx.ellipse(ball.x + 3, ball.y + 6, ball.r * 1.05, ball.r * .65, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-        const sphere = ctx.createRadialGradient(ball.x - ball.r * .36, ball.y - ball.r * .4, 1, ball.x, ball.y, ball.r * 1.15);
-        sphere.addColorStop(0, "#fffdf3"); sphere.addColorStop(.7, "#e5d9bd"); sphere.addColorStop(1, "#a99579");
-        ctx.save(); ctx.shadowColor = "#f0dba8"; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = sphere; ctx.fill();
+        ctx.save(); ctx.shadowColor = "#ffffff"; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
         ctx.clip(); ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#9c876944"; ctx.lineWidth = 1;
+        ctx.strokeStyle = "#d8d2e866"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(ball.x + 3, ball.y + 1, ball.r * .72, -.8, 1.35); ctx.stroke();
-        ctx.fillStyle = "#ffffffaa"; ctx.beginPath(); ctx.arc(ball.x - 4, ball.y - 5, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(ball.x - 4, ball.y - 5, 2.2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
       function draw(time) {

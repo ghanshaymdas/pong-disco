@@ -21,7 +21,7 @@ The first side to reach seven points wins. To play again after a match, press **
 ## Implementation notes
 
 - The canvas uses a 900 × 560 logical playfield and scales responsively in the page. Colored moving light beams, pools of light, and mirrored-tile glints create a disco backdrop.
-- The ball has a 15-pixel radius, shaded surface, curved seam, highlight, and soft shadow. A brief expanding glow ring marks each bounce. Rounded, wider and longer paddles have bright neon colors and a soft glow.
+- The ball has a 15-pixel radius, clean white surface, subtle curved seam, and soft shadow. A brief expanding glow ring marks each bounce. Rounded, wider and extra-long paddles have bright neon colors and a soft glow.
 - Each wall bounce raises the ball's speed by 8%, up to a cap. Paddle hits keep that speed while changing direction; scoring starts the next round at the regular 360-pixel-per-second speed.
 - Player input is stored in a set of currently held keys and read every animation frame. This avoids depending on browser key-repeat events. Paddle positions are clamped to the playfield.
 - The ball position advances using horizontal and vertical velocity (`dx`, `dy`). At the top and bottom edges, the vertical velocity reverses. A capped frame delta keeps movement stable if a browser frame is delayed.
